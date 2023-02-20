@@ -23,12 +23,14 @@
 				oscillatorNode.stop(context.currentTime + 1); // duration = 1s
 			}
 			const answer = ~~(Math.random() * 24);
-			const pitch = 261.63 * (2 ** (answer/24));
+			const octave = ~~(Math.random() * 5) + 2; // 2~6
+			const pitch = 261.63 * (2 ** (answer/24 + octave - 4));
 			function hearTone() { playSound(pitch); }
-			function select(num) { alert(num == answer ? "Correct!" : "Wrong! The answer was " + document.getElementsByTagName("button")[answer+1].innerText + " (" + pitch + "Hz)"); }
+			function select(num) { alert(num == answer ? "Correct!" : "Wrong! The answer was " + document.getElementsByTagName("button")[answer+1].innerText + octave + " (" + pitch + "Hz)"); }
 		</script>
 	</head>
 	<body>
+		<p>For a new test, reload the page.</p>
 		<button onclick="hearTone()">Hear tone</button>
 		<br>
 		<h4>Answer choices:</h4>
