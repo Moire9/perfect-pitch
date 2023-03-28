@@ -4,7 +4,8 @@
 		<title>24-tone Perfect Pitch Tester</title>
 		<meta charset="utf-8">
 		<script>
-
+			if (localStorage[  "correct"] == undefined) localStorage[  "correct"] = 0;
+			if (localStorage["incorrect"] == undefined) localStorage["incorrect"] = 0;
 			// https://github.com/escottalexander/simpleTones.js
 			const context = new (window.AudioContext || window.webkitAudioContext)();
 			function playSound(frequency) {
@@ -30,25 +31,36 @@
 				return ~~(Math.random() * (document.getElementById("maxOctave").value - min + 1)) + min;
 			}
 
+			let unanswered = true;
 			let answer;
 			let octave;
 			const getPitch = () => 261.63 * (2 ** (answer/24 + octave - 4));
 
 			function reset() {
+				unanswered = true;
 				answer = getNote();
 				octave = getOctave();
 			}
 
 			function hearTone() { playSound(getPitch()); }
-			function select(num) { alert(num == answer ? "Correct!" : "Wrong! The answer was " + document.getElementsByTagName("button")[answer+1].innerText + octave + " (" + getPitch() + "Hz)"); }
-			//                                                                                  UPDATE THIS NUMBER IF BUTTONS ARE ADDED/REMOVED ^
+			function select(num) {
+				if (num == answer) {
+					if (unanswered) localStorage["correct"]++;
+					alert("Correct!");
+				} else {
+					if (unanswered) localStorage["incorrect"]++;
+					alert("Wrong! The answer was " + document.getElementsByTagName("button")[answer+2].innerText + octave + " (" + getPitch() + "Hz)");
+				} //		                        UPDATE THIS NUMBER IF BUTTONS ARE ADDED/REMOVED ^
+
+				unanswered = false;
+			}
 
 
 			// ONLOAD
 			function renderOctaveDisplay() {
 				const min = document.getElementById("minOctave").value;
 				const max = document.getElementById("maxOctave").value;
-				document.getElementById("octaveDisplay").textContent = min > max ? "A foolish fool you are, for the minimum cannot exceed the maximum! (IDK what happens if you try to run the test like this)." : min.padEnd(60) + max;
+				document.getElementById("octaveDisplay").textContent = min > max ? "A foolish fool you are, for the minimum cannot exceed the maximum! (IDK what happens if you try to run the test like this)." : "                   " + min.padEnd(42) + max;
 			}
 			window.onload = () => {
 				["minOctave","maxOctave"].forEach(x => {
@@ -88,15 +100,8 @@
 	<body>
 		<div class="content">
 			<h2>24-tone Perfect Pitch Tester</h2>
-			<p>              "Now with dark mode!"</p>
+			<p>              "Now with fixes with themes of fixes!"</p>
 			<p>This is a test to allow you to train/practice perfect pitch for quarter-tone increments.</p>
-			<br>
-			<h3>SETTINGS (reset after changing):</h3>
-			<p>Minimum octave                Maximum octave</p>
-			<input type="range" id="minOctave" min="1" max="8" value="2"/>
-			<input type="range" id="maxOctave" min="1" max="8" value="6"/>
-			<p id="octaveDisplay"></p>
-			<br>
 			<h3>TEST:</h3>
 			<button onclick="reset()">RESET</button>
 			<button onclick="hearTone()">HEAR TONE</button>
@@ -128,6 +133,12 @@
 			<button onclick="select(23)">B𝄲</button>
 			<br>
 			<p>If you see replacement characters; they are half-sharps.</p>
+			<br>
+			<h3>SETTINGS (reset after changing):</h3>
+			<p>Minimum octave                Maximum octave</p>
+			<input type="range" id="minOctave" min="1" max="8" value="2"/>
+			<input type="range" id="maxOctave" min="1" max="8" value="6"/>
+			<p id="octaveDisplay"></p>
 			<p class="footer">Website copyright Napkin Technologies. Tones generated with code from <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
 		</div>
 	</body>
