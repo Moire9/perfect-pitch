@@ -23,8 +23,7 @@
 				oscillatorNode.start();
 				oscillatorNode.stop(context.currentTime + 1); // duration = 1s
 			}
-			
-			
+
 			const getNote = () => ~~(Math.random() * 24);
 			const getOctave = () => {
 				const min = ~~document.getElementById("minOctave").value;
@@ -42,7 +41,7 @@
 
 			function hearTone() { playSound(getPitch()); }
 			function select(num) { alert(num == answer ? "Correct!" : "Wrong! The answer was " + document.getElementsByTagName("button")[answer+1].innerText + octave + " (" + getPitch() + "Hz)"); }
-
+			//                                                                                  UPDATE THIS NUMBER IF BUTTONS ARE ADDED/REMOVED ^
 
 
 			// ONLOAD
