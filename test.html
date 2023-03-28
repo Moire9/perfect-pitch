@@ -3,62 +3,8 @@
 	<head>
 		<title>24-tone Perfect Pitch Tester</title>
 		<meta charset="utf-8">
-		<script>
-			// https://github.com/escottalexander/simpleTones.js
-			const context = new (window.AudioContext || window.webkitAudioContext)();
-			function playSound(frequency) {
-				var oscillatorNode = context.createOscillator();
-				var gainNode = context.createGain();
-
-				oscillatorNode.type = "sine";
-				oscillatorNode.frequency.setValueAtTime(frequency, context.currentTime);
-
-				gainNode.gain.setValueAtTime(0.3, context.currentTime);
-				gainNode.gain.setValueCurveAtTime([1.0, 0.61, 0.37, 0.22, 0.14, 0.08, 0.05, 0.0], context.currentTime, 2.0);
-
-				oscillatorNode.connect(gainNode);
-				gainNode.connect(context.destination);
-
-				oscillatorNode.start();
-				oscillatorNode.stop(context.currentTime + 1); // duration = 1s
-			}
-			const answer = ~~(Math.random() * 24);
-			const octave = ~~(Math.random() * 5) + 2; // 2~6
-			const pitch = 261.63 * (2 ** (answer/24 + octave - 4));
-			function hearTone() { playSound(pitch); }
-			function select(num) { alert(num == answer ? "Correct!" : "Wrong! The answer was " + document.getElementsByTagName("button")[answer+1].innerText + octave + " (" + pitch + "Hz)"); }
-		</script>
 	</head>
 	<body>
-		<p>For a new test, reload the page.</p>
-		<button onclick="hearTone()">Hear tone</button>
-		<br>
-		<h4>Answer choices:</h4>
-		<button onclick="select(0)" >C</button>
-		<button onclick="select(1)" >C𝄲</button>
-		<button onclick="select(2)" >C#/Db</button>
-		<button onclick="select(3)" >C#𝄲</button>
-		<button onclick="select(4)" >D</button>
-		<button onclick="select(5)" >D𝄲</button>
-		<button onclick="select(6)" >D#/Eb</button>
-		<button onclick="select(7)" >D#𝄲</button>
-		<button onclick="select(8)" >E</button>
-		<button onclick="select(9)" >E𝄲</button>
-		<button onclick="select(10)">F</button>
-		<button onclick="select(11)">F𝄲</button>
-		<button onclick="select(12)">F#/Gb</button>
-		<button onclick="select(13)">F#𝄲</button>
-		<button onclick="select(14)">G</button>
-		<button onclick="select(15)">G𝄲</button>
-		<button onclick="select(16)">G#/Ab</button>
-		<button onclick="select(17)">G#𝄲</button>
-		<button onclick="select(18)">A</button>
-		<button onclick="select(19)">A𝄲</button>
-		<button onclick="select(20)">A#/Bb</button>
-		<button onclick="select(21)">A#𝄲</button>
-		<button onclick="select(22)">B</button>
-		<button onclick="select(23)">B𝄲</button>
-		<br>
-		<p>If you see replacement characters; they are half-sharps.</p>
+		<h1>Test moved to <a href="/">index</a>.</h1>
 	</body>
 </html>

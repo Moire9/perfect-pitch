@@ -2,11 +2,134 @@
 <html>
 	<head>
 		<title>24-tone Perfect Pitch Tester</title>
+		<meta charset="utf-8">
+		<script>
+
+			// https://github.com/escottalexander/simpleTones.js
+			const context = new (window.AudioContext || window.webkitAudioContext)();
+			function playSound(frequency) {
+				var oscillatorNode = context.createOscillator();
+				var gainNode = context.createGain();
+
+				oscillatorNode.type = "sine";
+				oscillatorNode.frequency.setValueAtTime(frequency, context.currentTime);
+
+				gainNode.gain.setValueAtTime(0.3, context.currentTime);
+				gainNode.gain.setValueCurveAtTime([1.0, 0.61, 0.37, 0.22, 0.14, 0.08, 0.05, 0.0], context.currentTime, 2.0);
+
+				oscillatorNode.connect(gainNode);
+				gainNode.connect(context.destination);
+
+				oscillatorNode.start();
+				oscillatorNode.stop(context.currentTime + 1); // duration = 1s
+			}
+			
+			
+			const getNote = () => ~~(Math.random() * 24);
+			const getOctave = () => {
+				const min = ~~document.getElementById("minOctave").value;
+				return ~~(Math.random() * (document.getElementById("maxOctave").value - min + 1)) + min;
+			}
+
+			let answer;
+			let octave;
+			const getPitch = () => 261.63 * (2 ** (answer/24 + octave - 4));
+
+			function reset() {
+				answer = getNote();
+				octave = getOctave();
+			}
+
+			function hearTone() { playSound(getPitch()); }
+			function select(num) { alert(num == answer ? "Correct!" : "Wrong! The answer was " + document.getElementsByTagName("button")[answer+1].innerText + octave + " (" + getPitch() + "Hz)"); }
+
+
+
+			// ONLOAD
+			function renderOctaveDisplay() {
+				const min = document.getElementById("minOctave").value;
+				const max = document.getElementById("maxOctave").value;
+				document.getElementById("octaveDisplay").textContent = min > max ? "A foolish fool you are, for the minimum cannot exceed the maximum! (IDK what happens if you try to run the test like this)." : min.padEnd(60) + max;
+			}
+			window.onload = () => {
+				["minOctave","maxOctave"].forEach(x => {
+					const el = document.getElementById(x);
+					const v = localStorage[x];
+					if (v != undefined) el.value = v;
+					el.addEventListener("input", e => {
+						renderOctaveDisplay();
+						localStorage[x] = el.value;
+					});
+				});
+				renderOctaveDisplay();
+				reset();
+			}
+		</script>
+		<style>
+			body {
+				background-color: #111;
+				/* to align the div */
+				display: flex;
+				justify-content: center;
+			}
+			.footer {
+				position: fixed;
+				bottom: 0;
+			}
+			button {
+				border-color: #666;
+				background-color: #222;
+			}
+			p, h2, h3, h4, input, button {
+				color: #FFF;
+				white-space: pre;
+			}
+		</style>
 	</head>
 	<body>
-		<h2>24-tone Perfect Pitch Tester</h2>
-		<p>This site is to help you improve your perfect pitch with testing. Click <a href="test">here</a> to begin. Originally designed for Will. Hi Jules.</p>
-		<br> <br>
-		<p>Website copyright Napkin Technologies. Tones generated with <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
+		<div class="content">
+			<h2>24-tone Perfect Pitch Tester</h2>
+			<p>              "Now with dark mode!"</p>
+			<p>This is a test to allow you to train/practice perfect pitch for quarter-tone increments.</p>
+			<br>
+			<h3>SETTINGS (reset after changing):</h3>
+			<p>Minimum octave                Maximum octave</p>
+			<input type="range" id="minOctave" min="1" max="8" value="2"/>
+			<input type="range" id="maxOctave" min="1" max="8" value="6"/>
+			<p id="octaveDisplay"></p>
+			<br>
+			<h3>TEST:</h3>
+			<button onclick="reset()">RESET</button>
+			<button onclick="hearTone()">HEAR TONE</button>
+			<br>
+			<h4>Answer choices:</h4>
+			<button onclick="select(0)" >C</button>
+			<button onclick="select(1)" >C𝄲</button>
+			<button onclick="select(2)" >C♯/D♭</button>
+			<button onclick="select(3)" >C♯𝄲</button>
+			<button onclick="select(4)" >D</button>
+			<button onclick="select(5)" >D𝄲</button>
+			<button onclick="select(6)" >D♯/E♭</button>
+			<button onclick="select(7)" >D♯𝄲</button>
+			<button onclick="select(8)" >E</button>
+			<button onclick="select(9)" >E𝄲</button>
+			<button onclick="select(10)">F</button>
+			<button onclick="select(11)">F𝄲</button>
+			<button onclick="select(12)">F♯/G♭</button>
+			<button onclick="select(13)">F♯𝄲</button>
+			<button onclick="select(14)">G</button>
+			<button onclick="select(15)">G𝄲</button>
+			<button onclick="select(16)">G♯/A♭</button>
+			<button onclick="select(17)">G♯𝄲</button>
+			<button onclick="select(18)">A</button>
+			<button onclick="select(19)">A𝄲</button>
+			<button onclick="select(20)">A♯/B♭</button>
+			<button onclick="select(21)">A♯𝄲</button>
+			<button onclick="select(22)">B</button>
+			<button onclick="select(23)">B𝄲</button>
+			<br>
+			<p>If you see replacement characters; they are half-sharps.</p>
+			<p class="footer">Website copyright Napkin Technologies. Tones generated with code from <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
+		</div>
 	</body>
 </html>
