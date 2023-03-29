@@ -4,20 +4,23 @@
 		<title>24-tone Perfect Pitch Tester</title>
 		<meta charset="utf-8">
 		<script>
-			if (localStorage[  "correct"] == undefined) localStorage[  "correct"] = 0;
-			if (localStorage["incorrect"] == undefined) localStorage["incorrect"] = 0;
+			if (localStorage["stat_right"] == undefined) localStorage["stat_right"] = 0;
+			if (localStorage["stat_wrong"] == undefined) localStorage["stat_wrong"] = 0;
+			if (localStorage["stat_notes"] == undefined) localStorage["stat_notes"] = new Array(48).fill(0);
+			// stats are stored in an array, of two values per note, the former being false count and former being true count
 
-			let noteNames; // initialized in onLoad
+			let noteButtons; // initialized in onLoad
 			let unanswered = true;
-			let answer;
+			let stats = localStorage["stat_notes"].split(",").map(x =>~~x)
+			let answer = 0; // temp
 			let octave;
 			let pitch;
 
 			// https://github.com/escottalexander/simpleTones.js
 			const context = new (window.AudioContext || window.webkitAudioContext)();
 			function hearTone() {
-				var oscillatorNode = context.createOscillator();
-				var gainNode = context.createGain();
+				const oscillatorNode = context.createOscillator();
+				const gainNode = context.createGain();
 
 				oscillatorNode.type = "sine";
 				oscillatorNode.frequency.setValueAtTime(pitch, context.currentTime);
@@ -33,142 +36,177 @@
 			}
 
 			function renderStats() {
-				const correct = ~~localStorage["correct"];
-				const total = ~~localStorage["incorrect"] + correct;
-				document.getElementById("success").textContent = "Correct: " + correct;
-				document.getElementById("failure").textContent = "Total: " + total;
-				document.getElementById("percent").textContent = "Rate: " + ~~(100 * (correct / (total))) + "%";
+				const correct = ~~localStorage["stat_right"];
+				const total = ~~localStorage["stat_wrong"] + correct;
+				document.getElementById("statSuccessDisplay").textContent = "Correct: " + correct;
+				document.getElementById("statFailureDisplay").textContent = "Total: " + total;
+				document.getElementById("statPercentDisplay").textContent = "Rate: " + ~~(100 * correct / total) + "%";
 			}
 
 			function resetStats() {
-				localStorage["correct"] = localStorage["incorrect"] = 0;
-				renderStats();
+				if (confirm("Reset all stats?")) {
+					localStorage["stat_right"] = localStorage["stat_wrong"] = 0;
+					localStorage["stat_notes"] = stats = new Array(48).fill(0);
+					renderStats();
+				}
 			}
 
 			function reset() {
+				noteButtons[answer].classList.remove("buttonCorrect");
+				for (button of noteButtons) button.classList.remove("buttonIncorrect");
+				document.getElementById("testAnswerDisplay").innerText = " ";
+				
 				unanswered = true;
+
 				answer = ~~(Math.random() * 24);
-				const min = ~~document.getElementById("minOctave").value;
-				octave = ~~(Math.random() * (document.getElementById("maxOctave").value - min + 1)) + min;
+				const min = ~~document.getElementById("settingRangeMinOctave").value;
+				octave = ~~(Math.random() * (document.getElementById("settingRangeMaxOctave").value - min + 1)) + min;
 				pitch = 261.63 * (2 ** (answer/24 + octave - 4));
+				
 			}
 
 			function select(num) {
-				if (num == answer) {
-					if (unanswered) localStorage["correct"]++;
-					alert("Correct!");
-				} else {
-					if (unanswered) localStorage["incorrect"]++;
-					alert("Wrong! The answer was " + noteNames[answer] + octave + " (" + ~~(100 * pitch)/100 + "Hz)");
-				}
+				if (unanswered) {
+					unanswered = false;
+					localStorage[num == answer ? "stat_right" : "stat_wrong"]++;
 
-				unanswered = false;
-				renderStats();
+					document.getElementById("testAnswerDisplay").innerText =
+						"The answer was " + noteButtons[answer].innerText + octave + " (" + ~~(100 * pitch)/100 + "Hz)";
+
+					noteButtons[num].classList.add("buttonIncorrect");
+					noteButtons[answer].classList.add("buttonCorrect");
+
+					stats[answer * 2 + (num == answer)]++;
+					localStorage["stat_notes"] = stats;
+
+					renderStats();
+				}
 			}
 
-
 			window.onload = () => {
-				["minOctave","maxOctave"].forEach(x => {
-					const el = document.getElementById(x);
-					const v = localStorage[x];
+				renderStats();
+				for (setting of [["MinOctave", "Minimum octave"], ["MaxOctave", "Maximum octave"], ["Volume", "Volume (%)"], ["Duration", "Duration (s)"]]) {
+					const id = setting[0];
+					const name = setting[1]; // needed for callback to work right
+					const el = document.getElementById("settingRange" + id);
+					const v = localStorage["setting_" + id];
 					if (v != undefined) el.value = v;
 					const callback = () => {
-						document.getElementById(x + "Display").textContent = "M" + x.slice(1,3) + "imum octave: " + el.value
-						localStorage[x] = el.value;
+						document.getElementById("settingRange" + id + "Display").textContent = name + ": " + el.value
+						localStorage["setting_" + id] = el.value;
 					};
 					callback();
 					el.addEventListener("input", callback);
-				});
-				noteNames = Array.from(document.getElementById("answers").childNodes).filter(x => x.nodeName == "BUTTON").map(x => x.innerText);
+				}
+				noteButtons = Array.from(document.getElementById("testAnswers").childNodes).filter(x => x.nodeName == "BUTTON");
 				reset();
-				renderStats();
 			}
 		</script>
 		<style>
+			/* Formatting */
 			body {
 				background-color: #111;
+				color: #FFF;
+
+				display: flex;
 			}
-			.content {
-				display: grid;
-				grid-template-columns: 20% 80%;
+			p, h1, h2, h3, h4, input, button {
+				white-space: pre;
+			}
+			button {
+				color: #FFF;
+				border-color: #666;
+				background-color: #222;
+			}
+			/* Special formatting */
+			.buttonIncorrect {
+				background-color: #844;
+			}
+			.buttonCorrect {
+				background-color: #484
+			}
+			/* Make answer buttons bigger */
+			#testAnswers > button {
+				width: 5em;
+				height: 2em;
+				cursor: pointer;
+			}
+			/* Layout */
+			#left, #right {
+				flex: 1;
+			}
+			#center {
+				flex: 4;
 			}
 			.footer {
 				position: fixed;
 				bottom: 0;
 			}
-			.choice {
-				width: 5em;
-				height: 2em;
-			}
-			.center, .centerContents > * {
-				display: flex;
-				justify-content: center;
-			}
-			button {
-				border-color: #666;
-				background-color: #222;
-			}
-			p, h2, h3, h4, input, button {
-				color: #FFF;
-				white-space: pre;
-			}
 		</style>
 	</head>
 	<body>
-		<div class="content">
-			<div class="settings">
-				<h3>SETTINGS:</h3>
-				<p id="minOctaveDisplay"></p>
-				<input type="range" id="minOctave" min="1" max="8" value="2"/>
-				<p id="maxOctaveDisplay"></p>
-				<input type="range" id="maxOctave" min="1" max="8" value="6"/>
-			</div>
-			<div class="header">
-				<h2>24-tone Perfect Pitch Tester</h2>
-				<p>              "Now with real CSS!"</p>
-				<p>This is a test to allow you to train/practice perfect pitch for quarter-tone increments.</p>
-			</div>
-			<div class="statistics">
+		<div id="left">
+			<div>
 				<h3>STATS:</h3>
-				<p id="success"></p>
-				<p id="failure"></p>
-				<p id="percent"></p>
+				<p id="statSuccessDisplay"></p>
+				<p id="statFailureDisplay"></p>
+				<p id="statPercentDisplay"></p>
 				<button onclick="resetStats()">RESET</button>
 			</div>
-			<div class="test">
+			<div>
+				<h3>SETTINGS:</h3>
+				<p id="settingRangeMinOctaveDisplay"></p>
+				<input type="range" id="settingRangeMinOctave" min="1" max="8" value="2"/>
+				<p id="settingRangeMaxOctaveDisplay"></p>
+				<input type="range" id="settingRangeMaxOctave" min="1" max="8" value="6"/>
+				<p id="settingRangeVolumeDisplay"></p>
+				<input type="range" id="settingRangeVolume" min="0" max="100" value="100"/>
+				<p id="settingRangeDurationDisplay"></p>
+				<input type="range" id="settingRangeDuration" min="0" max="5" value="1" step="0.1"/>
+			</div>
+		</div>
+		<div id="center">
+			<div>
+				<h2>24-tone Perfect Pitch Tester</h2>
+				<p>              "The statistics are now constructive!"</p>
+				<p>This is a test to allow you to train/practice perfect pitch for quarter-tone increments.</p>
+			</div>
+			<div>
 				<h3>TEST:</h3>
 				<button onclick="hearTone()">HEAR</button>
 				<button onclick="reset()">NEW TEST</button>
 				<br>
-				<h4>Answer choices:</h4>
-				<div id="answers">
-					<button class="choice" onclick="select(0)" >C</button>
-					<button class="choice" onclick="select(1)" >C𝄲</button>
-					<button class="choice" onclick="select(2)" >C♯/D♭</button>
-					<button class="choice" onclick="select(3)" >C♯𝄲</button>
-					<button class="choice" onclick="select(4)" >D</button>
-					<button class="choice" onclick="select(5)" >D𝄲</button>
-					<button class="choice" onclick="select(6)" >D♯/E♭</button>
-					<button class="choice" onclick="select(7)" >D♯𝄲</button>
-					<button class="choice" onclick="select(8)" >E</button>
-					<button class="choice" onclick="select(9)" >E𝄲</button>
-					<button class="choice" onclick="select(10)">F</button>
-					<button class="choice" onclick="select(11)">F𝄲</button>
-					<button class="choice" onclick="select(12)">F♯/G♭</button>
-					<button class="choice" onclick="select(13)">F♯𝄲</button>
-					<button class="choice" onclick="select(14)">G</button>
-					<button class="choice" onclick="select(15)">G𝄲</button>
-					<button class="choice" onclick="select(16)">G♯/A♭</button>
-					<button class="choice" onclick="select(17)">G♯𝄲</button>
-					<button class="choice" onclick="select(18)">A</button>
-					<button class="choice" onclick="select(19)">A𝄲</button>
-					<button class="choice" onclick="select(20)">A♯/B♭</button>
-					<button class="choice" onclick="select(21)">A♯𝄲</button>
-					<button class="choice" onclick="select(22)">B</button>
-					<button class="choice" onclick="select(23)">B𝄲</button>
+				<p id="testAnswerDisplay"> </p>
+				<div id="testAnswers">
+					<button onclick="select(0)" >C</button>
+					<button onclick="select(1)" >C𝄲</button>
+					<button onclick="select(2)" >C♯/D♭</button>
+					<button onclick="select(3)" >C♯𝄲</button>
+					<button onclick="select(4)" >D</button>
+					<button onclick="select(5)" >D𝄲</button>
+					<button onclick="select(6)" >D♯/E♭</button>
+					<button onclick="select(7)" >D♯𝄲</button>
+					<button onclick="select(8)" >E</button>
+					<button onclick="select(9)" >E𝄲</button>
+					<button onclick="select(10)">F</button>
+					<button onclick="select(11)">F𝄲</button>
+					<button onclick="select(12)">F♯/G♭</button>
+					<button onclick="select(13)">F♯𝄲</button>
+					<button onclick="select(14)">G</button>
+					<button onclick="select(15)">G𝄲</button>
+					<button onclick="select(16)">G♯/A♭</button>
+					<button onclick="select(17)">G♯𝄲</button>
+					<button onclick="select(18)">A</button>
+					<button onclick="select(19)">A𝄲</button>
+					<button onclick="select(20)">A♯/B♭</button>
+					<button onclick="select(21)">A♯𝄲</button>
+					<button onclick="select(22)">B</button>
+					<button onclick="select(23)">B𝄲</button>
 				</div>
 				<p>If you see replacement characters; they are half-sharps.</p>
-			<p class="footer">Website copyright Napkin Technologies. Tones generated with code from <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
+			</div>
+			<p class="footer">Website copyright Napkin Technologies. Source code available at: CTRL + SHIFT + I. Tones generated with code from <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
 		</div>
+		<div id="right" />
 	</body>
 </html>
