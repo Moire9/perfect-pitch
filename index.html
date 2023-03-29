@@ -6,14 +6,21 @@
 		<script>
 			if (localStorage[  "correct"] == undefined) localStorage[  "correct"] = 0;
 			if (localStorage["incorrect"] == undefined) localStorage["incorrect"] = 0;
+
+			let noteNames; // initialized in onLoad
+			let unanswered = true;
+			let answer;
+			let octave;
+			let pitch;
+
 			// https://github.com/escottalexander/simpleTones.js
 			const context = new (window.AudioContext || window.webkitAudioContext)();
-			function playSound(frequency) {
+			function hearTone() {
 				var oscillatorNode = context.createOscillator();
 				var gainNode = context.createGain();
 
 				oscillatorNode.type = "sine";
-				oscillatorNode.frequency.setValueAtTime(frequency, context.currentTime);
+				oscillatorNode.frequency.setValueAtTime(pitch, context.currentTime);
 
 				gainNode.gain.setValueAtTime(0.3, context.currentTime);
 				gainNode.gain.setValueCurveAtTime([1.0, 0.61, 0.37, 0.22, 0.14, 0.08, 0.05, 0.0], context.currentTime, 2.0);
@@ -25,67 +32,77 @@
 				oscillatorNode.stop(context.currentTime + 1); // duration = 1s
 			}
 
-			const getNote = () => ~~(Math.random() * 24);
-			const getOctave = () => {
-				const min = ~~document.getElementById("minOctave").value;
-				return ~~(Math.random() * (document.getElementById("maxOctave").value - min + 1)) + min;
+			function renderStats() {
+				const correct = ~~localStorage["correct"];
+				const total = ~~localStorage["incorrect"] + correct;
+				document.getElementById("success").textContent = "Correct: " + correct;
+				document.getElementById("failure").textContent = "Total: " + total;
+				document.getElementById("percent").textContent = "Rate: " + ~~(100 * (correct / (total))) + "%";
 			}
 
-			let unanswered = true;
-			let answer;
-			let octave;
-			const getPitch = () => 261.63 * (2 ** (answer/24 + octave - 4));
+			function resetStats() {
+				localStorage["correct"] = localStorage["incorrect"] = 0;
+				renderStats();
+			}
 
 			function reset() {
 				unanswered = true;
-				answer = getNote();
-				octave = getOctave();
+				answer = ~~(Math.random() * 24);
+				const min = ~~document.getElementById("minOctave").value;
+				octave = ~~(Math.random() * (document.getElementById("maxOctave").value - min + 1)) + min;
+				pitch = 261.63 * (2 ** (answer/24 + octave - 4));
 			}
 
-			function hearTone() { playSound(getPitch()); }
 			function select(num) {
 				if (num == answer) {
 					if (unanswered) localStorage["correct"]++;
 					alert("Correct!");
 				} else {
 					if (unanswered) localStorage["incorrect"]++;
-					alert("Wrong! The answer was " + document.getElementsByTagName("button")[answer+2].innerText + octave + " (" + getPitch() + "Hz)");
-				} //		                        UPDATE THIS NUMBER IF BUTTONS ARE ADDED/REMOVED ^
+					alert("Wrong! The answer was " + noteNames[answer] + octave + " (" + ~~(100 * pitch)/100 + "Hz)");
+				}
 
 				unanswered = false;
+				renderStats();
 			}
 
 
-			// ONLOAD
-			function renderOctaveDisplay() {
-				const min = document.getElementById("minOctave").value;
-				const max = document.getElementById("maxOctave").value;
-				document.getElementById("octaveDisplay").textContent = min > max ? "A foolish fool you are, for the minimum cannot exceed the maximum! (IDK what happens if you try to run the test like this)." : "                   " + min.padEnd(42) + max;
-			}
 			window.onload = () => {
 				["minOctave","maxOctave"].forEach(x => {
 					const el = document.getElementById(x);
 					const v = localStorage[x];
 					if (v != undefined) el.value = v;
-					el.addEventListener("input", e => {
-						renderOctaveDisplay();
+					const callback = () => {
+						document.getElementById(x + "Display").textContent = "M" + x.slice(1,3) + "imum octave: " + el.value
 						localStorage[x] = el.value;
-					});
+					};
+					callback();
+					el.addEventListener("input", callback);
 				});
-				renderOctaveDisplay();
+				noteNames = Array.from(document.getElementById("answers").childNodes).filter(x => x.nodeName == "BUTTON").map(x => x.innerText);
 				reset();
+				renderStats();
 			}
 		</script>
 		<style>
 			body {
 				background-color: #111;
-				/* to align the div */
-				display: flex;
-				justify-content: center;
+			}
+			.content {
+				display: grid;
+				grid-template-columns: 20% 80%;
 			}
 			.footer {
 				position: fixed;
 				bottom: 0;
+			}
+			.choice {
+				width: 5em;
+				height: 2em;
+			}
+			.center, .centerContents > * {
+				display: flex;
+				justify-content: center;
 			}
 			button {
 				border-color: #666;
@@ -99,46 +116,58 @@
 	</head>
 	<body>
 		<div class="content">
-			<h2>24-tone Perfect Pitch Tester</h2>
-			<p>              "Now with fixes with themes of fixes!"</p>
-			<p>This is a test to allow you to train/practice perfect pitch for quarter-tone increments.</p>
-			<h3>TEST:</h3>
-			<button onclick="reset()">RESET</button>
-			<button onclick="hearTone()">HEAR TONE</button>
-			<br>
-			<h4>Answer choices:</h4>
-			<button onclick="select(0)" >C</button>
-			<button onclick="select(1)" >C𝄲</button>
-			<button onclick="select(2)" >C♯/D♭</button>
-			<button onclick="select(3)" >C♯𝄲</button>
-			<button onclick="select(4)" >D</button>
-			<button onclick="select(5)" >D𝄲</button>
-			<button onclick="select(6)" >D♯/E♭</button>
-			<button onclick="select(7)" >D♯𝄲</button>
-			<button onclick="select(8)" >E</button>
-			<button onclick="select(9)" >E𝄲</button>
-			<button onclick="select(10)">F</button>
-			<button onclick="select(11)">F𝄲</button>
-			<button onclick="select(12)">F♯/G♭</button>
-			<button onclick="select(13)">F♯𝄲</button>
-			<button onclick="select(14)">G</button>
-			<button onclick="select(15)">G𝄲</button>
-			<button onclick="select(16)">G♯/A♭</button>
-			<button onclick="select(17)">G♯𝄲</button>
-			<button onclick="select(18)">A</button>
-			<button onclick="select(19)">A𝄲</button>
-			<button onclick="select(20)">A♯/B♭</button>
-			<button onclick="select(21)">A♯𝄲</button>
-			<button onclick="select(22)">B</button>
-			<button onclick="select(23)">B𝄲</button>
-			<br>
-			<p>If you see replacement characters; they are half-sharps.</p>
-			<br>
-			<h3>SETTINGS (reset after changing):</h3>
-			<p>Minimum octave                Maximum octave</p>
-			<input type="range" id="minOctave" min="1" max="8" value="2"/>
-			<input type="range" id="maxOctave" min="1" max="8" value="6"/>
-			<p id="octaveDisplay"></p>
+			<div class="settings">
+				<h3>SETTINGS:</h3>
+				<p id="minOctaveDisplay"></p>
+				<input type="range" id="minOctave" min="1" max="8" value="2"/>
+				<p id="maxOctaveDisplay"></p>
+				<input type="range" id="maxOctave" min="1" max="8" value="6"/>
+			</div>
+			<div class="header">
+				<h2>24-tone Perfect Pitch Tester</h2>
+				<p>              "Now with real CSS!"</p>
+				<p>This is a test to allow you to train/practice perfect pitch for quarter-tone increments.</p>
+			</div>
+			<div class="statistics">
+				<h3>STATS:</h3>
+				<p id="success"></p>
+				<p id="failure"></p>
+				<p id="percent"></p>
+				<button onclick="resetStats()">RESET</button>
+			</div>
+			<div class="test">
+				<h3>TEST:</h3>
+				<button onclick="hearTone()">HEAR</button>
+				<button onclick="reset()">NEW TEST</button>
+				<br>
+				<h4>Answer choices:</h4>
+				<div id="answers">
+					<button class="choice" onclick="select(0)" >C</button>
+					<button class="choice" onclick="select(1)" >C𝄲</button>
+					<button class="choice" onclick="select(2)" >C♯/D♭</button>
+					<button class="choice" onclick="select(3)" >C♯𝄲</button>
+					<button class="choice" onclick="select(4)" >D</button>
+					<button class="choice" onclick="select(5)" >D𝄲</button>
+					<button class="choice" onclick="select(6)" >D♯/E♭</button>
+					<button class="choice" onclick="select(7)" >D♯𝄲</button>
+					<button class="choice" onclick="select(8)" >E</button>
+					<button class="choice" onclick="select(9)" >E𝄲</button>
+					<button class="choice" onclick="select(10)">F</button>
+					<button class="choice" onclick="select(11)">F𝄲</button>
+					<button class="choice" onclick="select(12)">F♯/G♭</button>
+					<button class="choice" onclick="select(13)">F♯𝄲</button>
+					<button class="choice" onclick="select(14)">G</button>
+					<button class="choice" onclick="select(15)">G𝄲</button>
+					<button class="choice" onclick="select(16)">G♯/A♭</button>
+					<button class="choice" onclick="select(17)">G♯𝄲</button>
+					<button class="choice" onclick="select(18)">A</button>
+					<button class="choice" onclick="select(19)">A𝄲</button>
+					<button class="choice" onclick="select(20)">A♯/B♭</button>
+					<button class="choice" onclick="select(21)">A♯𝄲</button>
+					<button class="choice" onclick="select(22)">B</button>
+					<button class="choice" onclick="select(23)">B𝄲</button>
+				</div>
+				<p>If you see replacement characters; they are half-sharps.</p>
 			<p class="footer">Website copyright Napkin Technologies. Tones generated with code from <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
 		</div>
 	</body>
