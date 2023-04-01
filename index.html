@@ -1,20 +1,71 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>24-tone Perfect Pitch Tester</title>
+		<title>Perfect Pitch Tester</title>
 		<meta charset="utf-8">
 		<script>
-			if (localStorage["stat_right"] == undefined) localStorage["stat_right"] = 0;
-			if (localStorage["stat_wrong"] == undefined) localStorage["stat_wrong"] = 0;
-			if (localStorage["stat_notes"] == undefined) localStorage["stat_notes"] = new Array(48).fill(0);
-			// stats are stored in an array, of two values per note, the former being false count and former being true count
+			const ls = localStorage;
 
-			let noteButtons; // initialized in onLoad
-			let unanswered = true;
-			let stats = localStorage["stat_notes"].split(",").map(x =>~~x)
-			let answer = 0; // temp
+			const tuning = {
+				12: {
+					name: "12-tone",
+					notes: ["C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B"],
+					pitch: (note, octave) => 261.63 * (2 ** (note/12 + octave - 4))
+				},
+				24: {
+					name: "24-tone",
+					notes: ["C", "C+", "C#/Db", "C#+", "D", "D+", "D#/Eb", "D#+", "E", "E+", "F", "F+",
+					"F#/Gb", "F#+", "G", "G+", "G#/Ab", "G#+", "A", "A+", "A#/Bb", "A#+", "B", "B+"],
+					pitch: (note, octave) => 261.63 * (2 ** (note/12 + octave - 4))
+				}
+			};
+	
+			const settings = {
+				range: [
+					// { id, name, min=0, max, value, step=1 }
+					{
+						id: "MinOctave",
+						name: "Minimum octave",
+						max: 8, value: 2
+					},
+					{
+						id: "MaxOctave",
+						name: "Maximum octave",
+						max: 8, value: 6
+					},
+					{
+						id: "Volume",
+						name: "Volume (%)",
+						max: 100, value: 100
+					},
+					{
+						id: "Duration",
+						name: "Duration (s)",
+						max: 5, value: 1, step: 0.1
+					}
+				]
+			};
+			
+			const initls = (name, val = 0) => ls[name] ?? (ls[name] = val);
+
+			for (tune of Object.keys(tuning)) {
+				initls("stat" + tune + "Right");
+				initls("stat" + tune + "Wrong");
+				initls("stat" + tune + "Notes", new Array(tune * 2).fill(0));
+				// stats are stored in an array, of two values per note, the former being false count and former being true count
+			}
+
+			// Question answered?
+			let answered;
+			// Tuning system
+			let system;
+			// Index of correct answer button
+			let answer;
 			let octave;
-			let pitch;
+
+			const getPitch = () => tuning[system].pitch(answer, octave);
+
+			const stat = type => "stat" + system + type;
 
 			// https://github.com/escottalexander/simpleTones.js
 			const context = new (window.AudioContext || window.webkitAudioContext)();
@@ -23,7 +74,7 @@
 				const gainNode = context.createGain();
 
 				oscillatorNode.type = "sine";
-				oscillatorNode.frequency.setValueAtTime(pitch, context.currentTime);
+				oscillatorNode.frequency.setValueAtTime(getPitch(), context.currentTime);
 
 				gainNode.gain.setValueAtTime(0.3, context.currentTime);
 				gainNode.gain.setValueCurveAtTime([1.0, 0.61, 0.37, 0.22, 0.14, 0.08, 0.05, 0.0], context.currentTime, 2.0);
@@ -32,74 +83,114 @@
 				gainNode.connect(context.destination);
 
 				oscillatorNode.start();
-				oscillatorNode.stop(context.currentTime + 1); // duration = 1s
+				oscillatorNode.stop(context.currentTime + ~~ls["settingDuration"]);
 			}
 
 			function renderStats() {
-				const correct = ~~localStorage["stat_right"];
-				const total = ~~localStorage["stat_wrong"] + correct;
+				const correct = ~~ls[stat("Right")];
+				const total = ~~ls[stat("Wrong")] + correct;
 				document.getElementById("statSuccessDisplay").textContent = "Correct: " + correct;
 				document.getElementById("statFailureDisplay").textContent = "Total: " + total;
 				document.getElementById("statPercentDisplay").textContent = "Rate: " + ~~(100 * correct / total) + "%";
 			}
 
 			function resetStats() {
-				if (confirm("Reset all stats?")) {
-					localStorage["stat_right"] = localStorage["stat_wrong"] = 0;
-					localStorage["stat_notes"] = stats = new Array(48).fill(0);
+				if (confirm("Reset stats for this tuning system?")) {
+					ls[stat("Right")] = ls[stat("Wrong")] = 0;
+					ls[stat("Notes")] = new Array(system * 2).fill(0);
 					renderStats();
 				}
 			}
 
 			function reset() {
-				noteButtons[answer].classList.remove("buttonCorrect");
-				for (button of noteButtons) button.classList.remove("buttonIncorrect");
+				for (button of document.getElementById("testAnswers").childNodes) {
+					button.classList.remove("buttonWrong");
+					button.classList.remove("buttonRight");
+				}
 				document.getElementById("testAnswerDisplay").innerText = " ";
 				
-				unanswered = true;
+				answered = false;
 
-				answer = ~~(Math.random() * 24);
-				const min = ~~document.getElementById("settingRangeMinOctave").value;
-				octave = ~~(Math.random() * (document.getElementById("settingRangeMaxOctave").value - min + 1)) + min;
-				pitch = 261.63 * (2 ** (answer/24 + octave - 4));
+				answer = ~~(Math.random() * system);
+				const min = ~~ls["settingMinOctave"];
+				octave = ~~(Math.random() * (~~ls["settingMaxOctave"] - min + 1)) + min;
 				
 			}
 
 			function select(num) {
-				if (unanswered) {
-					unanswered = false;
-					localStorage[num == answer ? "stat_right" : "stat_wrong"]++;
+				if (answered) return;
+				
+				answered = true;
+				ls[num == answer ? "stat" + system + "Right" : "stat" + system + "Wrong"]++;
 
-					document.getElementById("testAnswerDisplay").innerText =
-						"The answer was " + noteButtons[answer].innerText + octave + " (" + ~~(100 * pitch)/100 + "Hz)";
+				document.getElementById("testAnswerDisplay").innerText =
+					"The answer was " + tuning[system].notes[answer] + octave + " (" + ~~(100 * getPitch())/100 + "Hz)";
 
-					noteButtons[num].classList.add("buttonIncorrect");
-					noteButtons[answer].classList.add("buttonCorrect");
+				const ta = document.getElementById("testAnswers").childNodes;
+				ta[num].classList.add("buttonWrong");
+				ta[answer].classList.add("buttonRight");
 
-					stats[answer * 2 + (num == answer)]++;
-					localStorage["stat_notes"] = stats;
+				const stats = ls[stat("Notes")].split(",").map(x => ~~x);
+				stats[answer * 2 + (num == answer)]++;
+				ls[stat("Notes")] = stats;
 
-					renderStats();
+				renderStats();
+
+			}
+
+			function changeTuningSystem(count) {
+				system = ~~count;
+				const testAnswers = document.getElementById("testAnswers");
+				// remove all buttons
+				testAnswers.innerHTML = "";
+
+				for (let i = 0; i < count; i++) {
+					const button = document.createElement("button");
+					button.setAttribute("onclick", "select(" + i + ")");
+					button.textContent = tuning[count].notes[i];
+					testAnswers.appendChild(button);
 				}
+				renderStats();
 			}
 
 			window.onload = () => {
-				renderStats();
-				for (setting of [["MinOctave", "Minimum octave"], ["MaxOctave", "Maximum octave"], ["Volume", "Volume (%)"], ["Duration", "Duration (s)"]]) {
-					const id = setting[0];
-					const name = setting[1]; // needed for callback to work right
-					const el = document.getElementById("settingRange" + id);
-					const v = localStorage["setting_" + id];
-					if (v != undefined) el.value = v;
-					const callback = () => {
-						document.getElementById("settingRange" + id + "Display").textContent = name + ": " + el.value
-						localStorage["setting_" + id] = el.value;
-					};
-					callback();
-					el.addEventListener("input", callback);
+				// System is special and treated differently from other settings
+				const systemsMenu = document.getElementById("system");
+				for (system of Object.keys(tuning)) {
+					const option = document.createElement("option");
+					option.setAttribute("value", system);
+					option.innerText = tuning[system].name;
+					systemsMenu.appendChild(option);
 				}
-				noteButtons = Array.from(document.getElementById("testAnswers").childNodes).filter(x => x.nodeName == "BUTTON");
+				changeTuningSystem(systemsMenu.value = ls["system"]);
+				
+				const setlist = document.getElementById("settings");
+				for (setting of settings.range) {
+					const id = setting.id;
+					const name = setting.name; // needed for callback to work right
+					const display = document.createElement("p");
+					display.id = "settingRange" + id + "Display";
+					setlist.appendChild(display);
+					const slider = document.createElement("input");
+					slider.id = "settingRange" + id;
+					slider.setAttribute("type", "range");
+					slider.setAttribute("min", setting.min ?? 0);
+					slider.setAttribute("max", setting.max);
+					slider.setAttribute("value", setting.value);
+					slider.setAttribute("step", setting.step ?? 0);
+					setlist.appendChild(slider);
+					slider.value = ls["setting" + id] ?? slider.value
+					const callback = () => display.textContent = name + ": " + (ls["setting" + id] = slider.value);
+					callback();
+					slider.addEventListener("input", callback);
+				}
+
+				document.getElementById("system").addEventListener("input", e => {
+					changeTuningSystem(ls["system"] = e.target.value);
+					reset();
+				});
 				reset();
+				renderStats();
 			}
 		</script>
 		<style>
@@ -107,24 +198,19 @@
 			body {
 				background-color: #111;
 				color: #FFF;
-
+				/* Children */
 				display: flex;
+				gap: 20px;
 			}
-			p, h1, h2, h3, h4, input, button {
-				white-space: pre;
-			}
-			button {
+			p, h1, h2, h3, h4, input, label, button { white-space: pre; }
+			button, select, option {
 				color: #FFF;
 				border-color: #666;
 				background-color: #222;
 			}
 			/* Special formatting */
-			.buttonIncorrect {
-				background-color: #844;
-			}
-			.buttonCorrect {
-				background-color: #484
-			}
+			.buttonWrong { background-color: #844; }
+			.buttonRight { background-color: #484; }
 			/* Make answer buttons bigger */
 			#testAnswers > button {
 				width: 5em;
@@ -133,12 +219,14 @@
 			}
 			/* Layout */
 			#left, #right {
-				flex: 1;
+				/* Children */
+				display: flex;
+				flex-direction: column;
 			}
 			#center {
-				flex: 4;
+				flex-grow: 1;
 			}
-			.footer {
+			#footer {
 				position: fixed;
 				bottom: 0;
 			}
@@ -153,23 +241,14 @@
 				<p id="statPercentDisplay"></p>
 				<button onclick="resetStats()">RESET</button>
 			</div>
-			<div>
-				<h3>SETTINGS:</h3>
-				<p id="settingRangeMinOctaveDisplay"></p>
-				<input type="range" id="settingRangeMinOctave" min="1" max="8" value="2"/>
-				<p id="settingRangeMaxOctaveDisplay"></p>
-				<input type="range" id="settingRangeMaxOctave" min="1" max="8" value="6"/>
-				<p id="settingRangeVolumeDisplay"></p>
-				<input type="range" id="settingRangeVolume" min="0" max="100" value="100"/>
-				<p id="settingRangeDurationDisplay"></p>
-				<input type="range" id="settingRangeDuration" min="0" max="5" value="1" step="0.1"/>
-			</div>
 		</div>
 		<div id="center">
 			<div>
-				<h2>24-tone Perfect Pitch Tester</h2>
-				<p>              "The statistics are now constructive!"</p>
-				<p>This is a test to allow you to train/practice perfect pitch for quarter-tone increments.</p>
+				<h2> Perfect Pitch Tester</h2>
+				<p>              "Now with less notes!"</p>
+				<p>This is a test to allow you to train/practice perfect pitch for various tuning systems.</p>
+				<label for="system">Tuning system: </label>
+				<select name="system" id="system"></select>
 			</div>
 			<div>
 				<h3>TEST:</h3>
@@ -177,36 +256,16 @@
 				<button onclick="reset()">NEW TEST</button>
 				<br>
 				<p id="testAnswerDisplay"> </p>
-				<div id="testAnswers">
-					<button onclick="select(0)" >C</button>
-					<button onclick="select(1)" >C𝄲</button>
-					<button onclick="select(2)" >C♯/D♭</button>
-					<button onclick="select(3)" >C♯𝄲</button>
-					<button onclick="select(4)" >D</button>
-					<button onclick="select(5)" >D𝄲</button>
-					<button onclick="select(6)" >D♯/E♭</button>
-					<button onclick="select(7)" >D♯𝄲</button>
-					<button onclick="select(8)" >E</button>
-					<button onclick="select(9)" >E𝄲</button>
-					<button onclick="select(10)">F</button>
-					<button onclick="select(11)">F𝄲</button>
-					<button onclick="select(12)">F♯/G♭</button>
-					<button onclick="select(13)">F♯𝄲</button>
-					<button onclick="select(14)">G</button>
-					<button onclick="select(15)">G𝄲</button>
-					<button onclick="select(16)">G♯/A♭</button>
-					<button onclick="select(17)">G♯𝄲</button>
-					<button onclick="select(18)">A</button>
-					<button onclick="select(19)">A𝄲</button>
-					<button onclick="select(20)">A♯/B♭</button>
-					<button onclick="select(21)">A♯𝄲</button>
-					<button onclick="select(22)">B</button>
-					<button onclick="select(23)">B𝄲</button>
-				</div>
+				<div id="testAnswers"></div>
 				<p>If you see replacement characters; they are half-sharps.</p>
 			</div>
-			<p class="footer">Website copyright Napkin Technologies. Source code available at: CTRL + SHIFT + I. Tones generated with code from <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
+			<p id="footer">Website copyright Napkin Technologies. Source code available at: CTRL + SHIFT + I. Tones generated with code from <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
 		</div>
-		<div id="right" />
+		<div id="right">
+			<div>
+				<h3>SETTINGS:</h3>
+				<div id="settings"></div>
+			</div>
+		</div>
 	</body>
 </html>
