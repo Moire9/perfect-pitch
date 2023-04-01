@@ -10,13 +10,13 @@
 				12: {
 					name: "12-tone",
 					notes: ["C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B"],
-					pitch: (note, octave) => 261.63 * (2 ** (note/12 + octave - 4))
+					pitch: (note, octave) => 261.6255653 * (2 ** (note/12 + octave - 4))
 				},
 				24: {
 					name: "24-tone",
 					notes: ["C", "C+", "C#/Db", "C#+", "D", "D+", "D#/Eb", "D#+", "E", "E+", "F", "F+",
 					"F#/Gb", "F#+", "G", "G+", "G#/Ab", "G#+", "A", "A+", "A#/Bb", "A#+", "B", "B+"],
-					pitch: (note, octave) => 261.63 * (2 ** (note/12 + octave - 4))
+					pitch: (note, octave) => 261.6255653 * (2 ** (note/12 + octave - 4))
 				}
 			};
 	
@@ -34,11 +34,6 @@
 						max: 8, value: 6
 					},
 					{
-						id: "Volume",
-						name: "Volume (%)",
-						max: 100, value: 100
-					},
-					{
 						id: "Duration",
 						name: "Duration (s)",
 						max: 5, value: 1, step: 0.1
@@ -50,6 +45,8 @@
 					}
 				]
 			};
+
+			const setting = name => ls["setting" + name];
 			
 			const initls = (name, val = 0) => ls[name] ?? (ls[name] = val);
 
@@ -90,7 +87,7 @@
 				gainNode.connect(context.destination);
 
 				oscillatorNode.start();
-				oscillatorNode.stop(context.currentTime + ~~ls["settingDuration"]);
+				oscillatorNode.stop(context.currentTime + parseFloat(setting("Duration")));
 			}
 
 			function renderStats() {
@@ -100,7 +97,7 @@
 				document.getElementById("statFailureDisplay").textContent = "Total: " + total;
 				document.getElementById("statPercentDisplay").textContent = "Rate: " + ~~(100 * correct / total) + "%";
 				
-				const amount = Math.min(system, ~~ls["settingFailsDisplayed"]);
+				const amount = Math.min(system, ~~setting("FailsDisplayed"));
 				
 				if (amount == 0) document.getElementById("statMissingDisplay").textContent = "";
 				else {
@@ -138,8 +135,8 @@
 				answered = false;
 
 				answer = ~~(Math.random() * system);
-				const min = ~~ls["settingMinOctave"];
-				octave = ~~(Math.random() * (~~ls["settingMaxOctave"] - min + 1)) + min;
+				const min = ~~setting("MinOctave");
+				octave = ~~(Math.random() * (~~setting("MaxOctave") - min + 1)) + min;
 				
 			}
 
@@ -190,19 +187,19 @@
 				changeTuningSystem(systemsMenu.value = ls["system"]);
 				
 				const setlist = document.getElementById("settings");
-				for (setting of settings.range) {
-					const id = setting.id;
-					const name = setting.name; // needed for callback to work right
+				for (range of settings.range) {
+					const id = range.id;
+					const name = range.name; // needed for callback to work right
 					const display = document.createElement("p");
 					display.id = "settingRange" + id + "Display";
 					setlist.appendChild(display);
 					const slider = document.createElement("input");
 					slider.id = "settingRange" + id;
 					slider.setAttribute("type", "range");
-					slider.setAttribute("min", setting.min ?? 0);
-					slider.setAttribute("max", setting.max);
-					slider.setAttribute("value", setting.value);
-					slider.setAttribute("step", setting.step ?? 0);
+					slider.setAttribute("min", range.min ?? 0);
+					slider.setAttribute("max", range.max);
+					slider.setAttribute("value", range.value);
+					slider.setAttribute("step", range.step ?? 0);
 					setlist.appendChild(slider);
 					slider.value = ls["setting" + id] ?? slider.value
 					const callback = () => display.textContent = name + ": " + (ls["setting" + id] = slider.value);
