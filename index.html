@@ -104,14 +104,14 @@
 				
 				if (amount == 0) document.getElementById("statMissingDisplay").textContent = "";
 				else {
-					const stats = ls[stat("Notes")].split(",").map(x => ~~x);
-					const statMap = new Map(); // note : fail%
+					const perNote = ls[stat("Notes")].split(",").map(x => ~~x);
+					const perNoteMap = new Map(); // note : fail%
 					for (let i = 0; i < system; i++) {
-						const score = stats[i * 2] / (stats[i * 2] + stats[i * 2 + 1]);
-						statMap.set(tuning[system].notes[i], isNaN(score) ? 0 : score);
+						const score = perNote[i * 2] / (perNote[i * 2] + perNote[i * 2 + 1]);
+						perNoteMap.set(tuning[system].notes[i], isNaN(score) ? 0 : score);
 					}
 
-					const sorted = [...new Map([...statMap.entries()].sort((a, b) => b[1] - a[1]))];
+					const sorted = [...new Map([...perNoteMap.entries()].sort((a, b) => b[1] - a[1]))];
 					let text = "Most missed:";
 					for (let i = 0; i < amount; i++) {
 						text += "\n" + sorted[i][0] + " (" + ~~(100 * sorted[i][1]) + "%)";
@@ -129,7 +129,7 @@
 			}
 
 			function reset() {
-				for (button of document.getElementById("testAnswers").childNodes) {
+				for (button of document.getElementById("test").childNodes) {
 					button.classList.remove("buttonWrong");
 					button.classList.remove("buttonRight");
 				}
@@ -152,28 +152,28 @@
 				document.getElementById("testAnswerDisplay").innerText =
 					"The answer was " + tuning[system].notes[answer] + octave + " (" + ~~(100 * getPitch())/100 + "Hz)";
 
-				const ta = document.getElementById("testAnswers").childNodes;
+				const ta = document.getElementById("test").childNodes;
 				ta[num].classList.add("buttonWrong");
 				ta[answer].classList.add("buttonRight");
 
-				const stats = ls[stat("Notes")].split(",").map(x => ~~x);
-				stats[answer * 2 + (num == answer)]++;
-				ls[stat("Notes")] = stats;
+				const perNote = ls[stat("Notes")].split(",").map(x => ~~x);
+				perNote[answer * 2 + (num == answer)]++;
+				ls[stat("Notes")] = perNote;
 
 				renderStats();
 			}
 
 			function changeTuningSystem(count) {
 				system = ~~count;
-				const testAnswers = document.getElementById("testAnswers");
+				const test = document.getElementById("test");
 				// remove all buttons
-				testAnswers.innerHTML = "";
+				test.innerHTML = "";
 
 				for (let i = 0; i < count; i++) {
 					const button = document.createElement("button");
 					button.setAttribute("onclick", "select(" + i + ")");
 					button.textContent = tuning[count].notes[i];
-					testAnswers.appendChild(button);
+					test.appendChild(button);
 				}
 				renderStats();
 			}
@@ -238,7 +238,7 @@
 			.buttonWrong { background-color: #844; }
 			.buttonRight { background-color: #484; }
 			/* Make answer buttons bigger */
-			#testAnswers > button {
+			#test > button {
 				width: 5em;
 				height: 2em;
 				cursor: pointer;
@@ -262,6 +262,7 @@
 		<div id="left">
 			<div>
 				<h3>STATS:</h3>
+				<!-- I don't think it's worth it to generate this HTML because of how simple & how few stats -->
 				<p id="statSuccessDisplay"></p>
 				<p id="statFailureDisplay"></p>
 				<p id="statPercentDisplay"></p>
@@ -283,7 +284,7 @@
 				<button onclick="reset()">NEW TEST</button>
 				<br>
 				<p id="testAnswerDisplay"> </p>
-				<div id="testAnswers"></div>
+				<div id="test"></div>
 				<p>If you see replacement characters; they are half-sharps.</p>
 			</div>
 			<p id="footer">Website copyright Napkin Technologies. Source code available at: CTRL + SHIFT + I. Tones generated with code from <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
