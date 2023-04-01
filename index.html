@@ -9,11 +9,13 @@
 			const tuning = {
 				12: {
 					name: "12-tone",
+					desc: "12-tone equal temperament",
 					notes: ["C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B"],
 					pitch: (note, octave) => 261.6255653 * (2 ** (note/12 + octave - 4))
 				},
 				24: {
 					name: "24-tone",
+					desc: "24-tone equal temperament. `+` indicates half-sharp",
 					notes: ["C", "C+", "C#/Db", "C#+", "D", "D+", "D#/Eb", "D#+", "E", "E+", "F", "F+",
 					"F#/Gb", "F#+", "G", "G+", "G#/Ab", "G#+", "A", "A+", "A#/Bb", "A#+", "B", "B+"],
 					pitch: (note, octave) => 261.6255653 * (2 ** (note/12 + octave - 4))
@@ -172,6 +174,8 @@
 					button.textContent = tuning[count].notes[i];
 					test.appendChild(button);
 				}
+
+				document.getElementById("description").innerText = tuning[system].desc;
 				renderStats();
 			}
 
@@ -274,6 +278,7 @@
 				<p>This is a test to allow you to train/practice perfect pitch for various tuning systems.</p>
 				<label for="system">Tuning system: </label>
 				<select name="system" id="system"></select>
+				<p id="description"></p>
 			</div>
 			<div>
 				<h3>TEST:</h3>
@@ -282,9 +287,8 @@
 				<br>
 				<p id="testAnswerDisplay"> </p>
 				<div id="test"></div>
-				<p>If you see replacement characters; they are half-sharps.</p>
 			</div>
-			<p id="footer">Website copyright Napkin Technologies. Source code available at: CTRL + SHIFT + I. Tones generated with code from <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
+			<p id="footer">Website copyright Napkin Technologies. <a href="https://github.com/NapkinTech/perfect-pitch">Source code</a>. Tones generated with code from <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
 		</div>
 		<div id="right">
 			<div>
