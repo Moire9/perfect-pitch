@@ -68,7 +68,17 @@
 			// Index of correct answer button
 			let answer;
 			let octave;
+			
+			let removalMode = false;
+			const allowed = new Set();
 
+			function toggleRemoval() {
+				if (removalMode) reset();
+				removalMode = !removalMode;
+
+				document.getElementById("removalMode").innerText = removalMode ? "DISABLE" : "ENABLE";
+			}
+			
 			const getPitch = () => tuning[system].pitch(answer, octave);
 
 			const stat = type => "stat" + system + type;
@@ -136,14 +146,31 @@
 				
 				answered = false;
 
-				answer = ~~(Math.random() * system);
+				if (allowed.size == 0) {
+					alert("You must have at least one enabled!");
+					return;
+				}
+
+				answer = Array.from(allowed)[~~(Math.random() * allowed.size)];
 				const min = ~~setting("MinOctave");
 				octave = ~~(Math.random() * (~~setting("MaxOctave") - min + 1)) + min;
-				
 			}
 
 			function select(num) {
-				if (answered) return;
+				if (removalMode) {
+					const ta = document.getElementById("test").childNodes;
+	
+					if (allowed.has(num)) {
+						allowed.delete(num);
+						ta[num].classList.add("disabled");
+					} else {
+						allowed.add(num);
+						ta[num].classList.remove("disabled");
+					}
+
+					return;
+				}
+				if (answered || !allowed.has(num)) return;
 				
 				answered = true;
 				ls[num == answer ? "stat" + system + "Right" : "stat" + system + "Wrong"]++;
@@ -176,6 +203,8 @@
 				}
 
 				document.getElementById("description").innerText = tuning[system].desc;
+				allowed.clear();
+				[...Array(system).keys()].forEach(x => allowed.add(x));
 				renderStats();
 			}
 
@@ -238,21 +267,17 @@
 			/* Special formatting */
 			.buttonWrong { background-color: #844; }
 			.buttonRight { background-color: #484; }
+			.disabled {
+				color: #666;
+				cursor: not-allowed;
+			}
 			/* Make answer buttons bigger */
 			#test > button {
 				width: 5em;
 				height: 2em;
 				cursor: pointer;
 			}
-			/* Layout */
-			#left, #right {
-				/* Children */
-				display: flex;
-				flex-direction: column;
-			}
-			#center {
-				flex-grow: 1;
-			}
+			#center { flex-grow: 1; }
 			#footer {
 				position: fixed;
 				bottom: 0;
@@ -260,41 +285,34 @@
 		</style>
 	</head>
 	<body>
-		<div id="left">
-			<div>
-				<h3>STATS:</h3>
-				<!-- I don't think it's worth it to generate this HTML because of how simple & how few stats -->
-				<p id="statSuccessDisplay"></p>
-				<p id="statFailureDisplay"></p>
-				<p id="statPercentDisplay"></p>
-				<p id="statMissingDisplay"></p>
-				<button onclick="resetStats()">RESET</button>
-			</div>
+		<div>
+			<h3>STATS:</h3>
+			<!-- I don't think it's worth it to generate this HTML because of how simple & how few stats -->
+			<p id="statSuccessDisplay"></p>
+			<p id="statFailureDisplay"></p>
+			<p id="statPercentDisplay"></p>
+			<p id="statMissingDisplay"></p>
+			<button onclick="resetStats()">RESET</button>
 		</div>
 		<div id="center">
-			<div>
-				<h2> Perfect Pitch Tester</h2>
-				<p>              "Now actually helps you!"</p>
-				<p>This is a test to allow you to train/practice perfect pitch for various tuning systems.</p>
-				<label for="system">Tuning system: </label>
-				<select name="system" id="system"></select>
-				<p id="description"></p>
-			</div>
-			<div>
-				<h3>TEST:</h3>
-				<button onclick="hearTone()">HEAR</button>
-				<button onclick="reset()">NEW TEST</button>
-				<br>
-				<p id="testAnswerDisplay"> </p>
-				<div id="test"></div>
-			</div>
+			<h2> Perfect Pitch Tester</h2>
+			<p>This is a test to allow you to train/practice perfect pitch for various tuning systems.</p>
+			<label for="system">Tuning system: </label>
+			<select name="system" id="system"></select>
+			<p id="description"></p>
+			<h3>TEST:</h3>
+			<button onclick="hearTone()">HEAR</button>
+			<button onclick="reset()">NEW TEST</button>
+			<br>
+			<p>To toggle removal mode, click this button. In removal mode, clicking on a button will<br>toggle it out of the possible notes. Naturally, you cannot test while in removal mode.</p>
+			<button id="removalMode" onclick="toggleRemoval()">ENABLE</button>
+			<p id="testAnswerDisplay"> </p>
+			<div id="test"></div>
 			<p id="footer">Website copyright Napkin Technologies. <a href="https://github.com/NapkinTech/perfect-pitch">Source code</a>. Tones generated with code from <a href="https://github.com/escottalexander/simpleTones.js">simpleTones library</a>.</p>
 		</div>
-		<div id="right">
-			<div>
-				<h3>SETTINGS:</h3>
-				<div id="settings"></div>
-			</div>
+		<div>
+			<h3>SETTINGS:</h3>
+			<div id="settings"></div>
 		</div>
 	</body>
 </html>
